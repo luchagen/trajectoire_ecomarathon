@@ -1,5 +1,5 @@
-function [couple,Eval,cumEval]=voiturecalculs(couple0,N,v0,v1,laparcourir,integration)
-load("parametres.mat",'l','T','m','Cd','A','ro','fr','g','R','f')
+function [couple,Eval,cumEval,margev]=voiturecalculs(couple0,N,v0,v1,laparcourir,integration)
+load('parametres.mat','l','T','N','m','Cd','A','ro','fr','g','R','f',"Pkin","Phill","Proll","Pair","nubatx","nubaty","nucontrx","nucontry","nuconvx","nuconvy","numx","numy","numpx","numpy")
 
 
   
@@ -9,28 +9,27 @@ load("parametres.mat",'l','T','m','Cd','A','ro','fr','g','R','f')
 
 h=@(s)zeros(length(s),1); %profil en dénivelé du circuit
 
-nubat = @(v)ones(N,1); %rendement batterie
-nuconv= @(v)ones(N,1); %rendement conversion puissance
-nucontr= @(v)ones(N,1); %rendement controle moteur
-num=@(v)0.94*ones(N,1); %rendement moteur
-nump=@(v)ones(N,1); %rendement transmission
 
-Pkin=@(v)max(0,m*v.*[diff(v);0]/(T/N)); %Puissance cinétique 
-Pair=@(v)(1/2)*Cd*A*ro*v.*3; %Puissance des frottements de l'air
-Proll=@(v)m*g*fr*v; % Puissance de la résistance au roulement
-Phill=@(v)m*g*[diff(h(cumtrapz(v)*(T/N)));0]; %energie dépensée pour gravir une pente
+nubat = @(v)interp1(nubatx,nubaty,v,'linear','extrap'); %rendement batterie interpolation
+nuconv= @(v)interp1(nuconvx,nuconvy,v,'linear','extrap'); %rendement conversion puissance
+nucontr= @(v)interp1(nucontrx,nucontry,v,'linear','extrap'); %rendement controle moteur
+num=@(v)interp1(numx,numy,v,'linear','extrap'); %rendement moteur
+nump=@(v)interp1(numpx,numpy,v,'linear','extrap'); %rendement transmission
+
+fun = @(v)trapz((1./(nubat(v).*nuconv(v).*nucontr(v).*num(v).*nump(v))).*(Pkin(v)+Pair(v)+Proll(v)+Phill(v)))*(T/N); %energie prise à la batterie
+
 
 if integration == '0'
-    fun = @(couple)sum((1./(nubat(Ecarloc(couple)).*nuconv(Ecarloc(couple)).*nucontr(Ecarloc(couple)).*num(Ecarloc(couple)).*nump(Ecarloc(couple)))).*max(0,(R)*(couple).*(Ecarloc(couple))))*(T/N); %energie prise à la roue, démarrages
-    cumfun = @(couple)cumsum((1./(nubat(Ecarloc(couple)).*nuconv(Ecarloc(couple)).*nucontr(Ecarloc(couple)).*num(Ecarloc(couple)).*nump(Ecarloc(couple)))).*max(0,(R)*(couple).*(Ecarloc(couple))))*(T/N); %energie prise à la roue, démarrages
+    fun = @(couple)trapz((1./(nubat(Ecarloc(couple)).*nuconv(Ecarloc(couple)).*nucontr(Ecarloc(couple)).*num(Ecarloc(couple)).*nump(Ecarloc(couple)))).*max(0,(R)*(couple).*(Ecarloc(couple))))*(T/N); %energie prise à la roue, démarrages
+    cumfun = @(couple)cumtrapz((1./(nubat(Ecarloc(couple)).*nuconv(Ecarloc(couple)).*nucontr(Ecarloc(couple)).*num(Ecarloc(couple)).*nump(Ecarloc(couple)))).*max(0,(R)*(couple).*(Ecarloc(couple))))*(T/N); %energie prise à la roue, démarrages
 end
 if integration == '0.5'   
-    fun =@(couple)sum((1./(nubat(Ecarloc(couple)).*nuconv(Ecarloc(couple)).*nucontr(Ecarloc(couple)).*num(Ecarloc(couple)).*nump(Ecarloc(couple)))).*max(0,(R/4)*(couple+diag(ones(N-1,1),1)*couple).*(Ecarloc(couple)+diag(ones(N-1,1),1)*Ecarloc(couple))))*(T/N); %energie prise à la roue, coast zigzag
-    cumfun = @(couple) cumsum((1./(nubat(Ecarloc(couple)).*nuconv(Ecarloc(couple)).*nucontr(Ecarloc(couple)).*num(Ecarloc(couple)).*nump(Ecarloc(couple)))).*max(0,(R/4)*(couple+diag(ones(N-1,1),1)*couple).*(Ecarloc(couple)+diag(ones(N-1,1),1)*Ecarloc(couple))))*(T/N); %energie prise à la roue, coast zigzag
+    fun =@(couple)trapz((1./(nubat(Ecarloc(couple)).*nuconv(Ecarloc(couple)).*nucontr(Ecarloc(couple)).*num(Ecarloc(couple)).*nump(Ecarloc(couple)))).*max(0,(R/4)*(couple+diag(ones(N-1,1),1)*couple).*(Ecarloc(couple)+diag(ones(N-1,1),1)*Ecarloc(couple))))*(T/N); %energie prise à la roue, coast zigzag
+    cumfun = @(couple) cumtrapz((1./(nubat(Ecarloc(couple)).*nuconv(Ecarloc(couple)).*nucontr(Ecarloc(couple)).*num(Ecarloc(couple)).*nump(Ecarloc(couple)))).*max(0,(R/4)*(couple+diag(ones(N-1,1),1)*couple).*(Ecarloc(couple)+diag(ones(N-1,1),1)*Ecarloc(couple))))*(T/N); %energie prise à la roue, coast zigzag
 end
 if integration == '1'   
-    fun = @(couple)sum((1./(nubat(Ecarloc(couple)).*nuconv(Ecarloc(couple)).*nucontr(Ecarloc(couple)).*num(Ecarloc(couple)).*nump(Ecarloc(couple)))).*max(0,(R/2)*(couple).*(Ecarloc(couple)+diag(ones(N-1,1),1)*Ecarloc(couple))))*(T/N) ;%energie prise à la roue, coast final
-    cumfun = @(couple) cumsum((1./(nubat(Ecarloc(couple)).*nuconv(Ecarloc(couple)).*nucontr(Ecarloc(couple)).*num(Ecarloc(couple)).*nump(Ecarloc(couple)))).*max(0,(R/2)*(couple).*(Ecarloc(couple)+diag(ones(N-1,1),1)*Ecarloc(couple))))*(T/N) ;%energie prise à la roue, coast final
+    fun = @(couple)trapz((1./(nubat(Ecarloc(couple)).*nuconv(Ecarloc(couple)).*nucontr(Ecarloc(couple)).*num(Ecarloc(couple)).*nump(Ecarloc(couple)))).*max(0,(R/2)*(couple).*(Ecarloc(couple)+diag(ones(N-1,1),1)*Ecarloc(couple))))*(T/N) ;%energie prise à la roue, coast final
+    cumfun = @(couple) cumtrapz((1./(nubat(Ecarloc(couple)).*nuconv(Ecarloc(couple)).*nucontr(Ecarloc(couple)).*num(Ecarloc(couple)).*nump(Ecarloc(couple)))).*max(0,(R/2)*(couple).*(Ecarloc(couple)+diag(ones(N-1,1),1)*Ecarloc(couple))))*(T/N) ;%energie prise à la roue, coast final
 end
 A_LININEQ=[zeros(1,N)];
 b_LININEQ=[1];
@@ -39,11 +38,12 @@ b_LINEQ=[0];
 
 lb=-940*ones(N,1);
 ub=854*ones(N,1);
-options= optimoptions('fmincon','Algorithm','sqp','ConstraintTolerance',1e-3,'MaxFunctionEvaluations',1000*N,'MaxIterations',1000*N,'PlotFcn',{'optimplotfval';'optimplotfvalconstr';'optimplotconstrviolation'});
+options= optimoptions('fmincon','Algorithm','sqp','ConstraintTolerance',1e-1,'MaxFunctionEvaluations',1000*N,'MaxIterations',1000*N,'PlotFcn',{'optimplotfval';'optimplotfvalconstr';'optimplotconstrviolation'});
 
 
 [couple,Eval] = fmincon(fun,couple0,A_LININEQ,b_LININEQ,A_LINEQ,b_LINEQ,lb,ub,@NONLCONloc,options);
 cumEval= cumfun(couple);
+margev= NONLCONloc(couple);
 
 function [c,ceq]= NONLCONloc(couple)
     load("parametres.mat",'l','m','Cd','A','ro','fr','g','R','f')
@@ -57,20 +57,19 @@ function [c,ceq]= NONLCONloc(couple)
     vmax=@(s)min(100*ones(length(s),1),vmaxvirage); %vitesses maximales autorisées à chaque point du circuit
     
 
-    c=[Ecarloc(couple)-vmax(parcourscircuit),-Ecarloc(couple),(R/4)*(couple+diag(ones(N-1,1),1)*couple).*(Ecarloc(couple)+diag(ones(N-1,1),1)*Ecarloc(couple))-1000*(T/N)];%vitesse max circuit
-    ceq=[ones(1,N)*(T/N)*Ecarloc(couple)-laparcourir,[zeros(1,N-1),1]*Ecarloc(couple)-v1];%condition de parcours du circuit + vitesse nulle à l'arrivée
+    c=[Ecarloc(couple)-vmax(parcourscircuit),-Ecarloc(couple),(R/4)*(couple+diag(ones(N-1,1),1)*couple).*(Ecarloc(couple)+diag(ones(N-1,1),1)*Ecarloc(couple))-1000];%vitesse max circuit
+    ceq=[ones(1,N)*(T/N)*Ecarloc(couple)-laparcourir,([zeros(1,N-1),1]*Ecarloc(couple)-v1)];%condition de parcours du circuit + vitesse nulle à l'arrivée
 end
 function v= Ecarloc(couple)%renvoie la vitesse
 
-  
-    
-    %load("parametres.mat",'l','m','Cd','A','ro','fr','g','R','f')
+    load('parametres.mat','angle')
     v=zeros(length(couple),1);
     vcurrent=v0;
     
     for j=1:length(couple)
         v(j)=vcurrent;
-        vcurrent=vcurrent+ (couple(j)*R-sign(vcurrent)*(1/2)*Cd*A*ro*vcurrent^2-sign(vcurrent)*m*g*fr)*(T/N)/m; %bilan des forces
+        theta =angle((T/N)*trapz(v)./l);
+        vcurrent=vcurrent+ (couple(j)*R-sign(vcurrent)*(1/2)*Cd*A*ro*vcurrent^2-sign(vcurrent)*m*g*fr*cos(theta)+m*g*sin(theta))*(T/N)/m; %bilan des forces
         
     end
 end

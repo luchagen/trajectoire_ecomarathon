@@ -6,6 +6,7 @@ clear, close all
 parametres
 %% parametres circuit
 Circuitsparams
+parametres
 %% paramfinder data
 
 load("parametres.mat",'l','T','N','m','Cd','A','ro','fr','g','R','f','kv',"PCI","Pseudo_rendement","density_H2_Stp")
@@ -77,85 +78,94 @@ legend( "energie totale consommée au niveau de la pile","estimation")
 title("energie totale consommée")
 xlabel( "consommation réelle  : "+ eqJoule(end)+ "    consommation estimée  : "+sum(energy1(newparams)))
 
-%% optim1
+%% optim1 %modèle simple, puissances fonction des vitesses
 
-voiturecalculs1
-load("parametres.mat","Pkin","Phill","Proll","Pair","fun","nubat","nucontr","nuconv","num","nump")
-load('couple.mat','Couple')
+[Couple,Eval,cumEval,v]=voiturecalculs1;
+
+
 figure(11)
 plot(Couple)
+title('profil de couple optimal (N.m)')
+xlabel('avancement dans le circuit')
+ylabel('couple')
 figure(12)
-plot(vitesse(Couple))
+plot(v)
+title('profil de vitesse optimal (m/s)')
+xlabel('avancement dans le circuit')
+ylabel('vitesse')
 figure(13)
-plot(cumsum((1./(nubat(vitesse(Couple)).*nuconv(vitesse(Couple)).*nucontr(vitesse(Couple)).*num(vitesse(Couple)).*nump(vitesse(Couple)))).*(Pkin(vitesse(Couple))+Pair(vitesse(Couple))+Proll(vitesse(Couple))+Phill(vitesse(Couple)))*(T/N)))
+plot(cumEval)
 title('energie prise à la roue')
-xlabel("energie totale (J) : " + fun(vitesse(Couple))+ "  (" + fun(vitesse(Couple))/3600000+" kWh)")
-%% optim2
-load("parametres.mat",'l','T','N','m','Cd','A','ro','fr','g','R','f','l','T','N','m','Cd','A','ro','fr','g','R','f',"kv","Pkin","Phill","Proll","Pair")
+xlabel("energie totale (J) : " + Eval + "  (" + Eval/3600000+" kWh)")
+figure(14)
+plot(-NONLCON1(vitesse(Couple)))
+title("marge en vitesse pour non glissement (m/s)")
 
-[couple,Eval,cumEval]=voiturecalculs(Couple,N,0,0,l,'0');
+
+
+%% optim2 modèle puissance = couple roue * vitesse roue (intégration rectangles à gauche)
+load("parametres.mat",'l','T','N','m','Cd','A','ro','fr','g','R','f','l','T','N','m','Cd','A','ro','fr','g','R','f',"kv","Pkin","Phill","Proll","Pair")
+load('couple.mat','Couple')
+[couple,Eval,cumEval,margev]=voiturecalculs(Couple,N,0,0,l,'0');
 figure(31)
 plot(couple)
+title('profil de couple optimal (N.m)')
+xlabel('avancement dans le circuit')
+ylabel('couple')
 figure(32)
 plot(vitesse(couple))
+title('profil de vitesse optimal (m/s)')
+xlabel('avancement dans le circuit')
+ylabel('vitesse')
 figure(33)
 plot (cumEval)
 title('energie prise à la roue - restarts')
 xlabel("energie totale (J) : " + Eval + "  (" + Eval/3600000+ " kWh)")
-
-%% optim3
-load("parametres.mat",'l','T','N','m','Cd','A','ro','fr','g','R','f','l','T','N','m','Cd','A','ro','fr','g','R','f',"kv","Pkin","Phill","Proll","Pair")
-
-[couple,Eval,cumEval]=voiturecalculs(Couple,N,0,0,l,'0.5');
+figure(34)
+plot(-margev)
+title("marge en vitesse pour non glissement (m/s)")
+%% optim3 modèle puissance = couple roue * vitesse roue (intégration rectangles milieux)
+load("parametres.mat",'l','N')
+load('couple.mat','Couple')
+[couple,Eval,cumEval,margev]=voiturecalculs(Couple,N,0,0,l,'0.5');
 figure(21)
 plot(couple)
+title('profil de couple optimal (N.m)')
+xlabel('avancement dans le circuit')
+ylabel('couple')
 figure(22)
 plot(vitesse(couple))
+title('profil de vitesse optimal (m/s)')
+xlabel('avancement dans le circuit')
+ylabel('vitesse')
 figure(23)
 plot (cumEval)
 title('energie prise à la roue - up&down')
 xlabel("energie totale (J) : " + Eval + "  (" + Eval/3600000+ " kWh)")
-%% optim4
+figure(24)
+plot(-margev)
+title("marge en vitesse pour non glissement (m/s)")
+%% optim4 modèle puissance = couple roue * vitesse roue (intégration rectangles à droite*)
 load("parametres.mat",'l','T','N','m','Cd','A','ro','fr','g','R','f','l','T','N','m','Cd','A','ro','fr','g','R','f',"kv","Pkin","Phill","Proll","Pair")
-
-[couple,Eval,cumEval]=voiturecalculs(Couple,N,0,0,l,'1');
+load('couple.mat','Couple')
+[couple,Eval,cumEval,margev]=voiturecalculs(Couple,N,0,0,l,'1');
 figure(41)
 plot(couple)
+title('profil de couple optimal (N.m)')
+xlabel('avancement dans le circuit')
+ylabel('couple')
 figure(42)
 plot(vitesse(couple))
+title('profil de vitesse optimal (m/s)')
+xlabel('avancement dans le circuit')
+ylabel('vitesse')
 figure(43)
 plot (cumEval)
 title('energie prise à la roue - finalcoast')
 xlabel("energie totale (J) : " + Eval + "  (" + Eval/3600000+ " kWh)")
-
-%% optim1 pente
-
-voiturecalculs1pente
-load("parametres.mat","Pkin","Phill","Proll","Pair","fun","nubat","nucontr","nuconv","num","nump")
-load('couple.mat','Couple')
-figure(51)
-plot(Couple)
-figure(52)
-plot(vitesse(Couple))
-figure(53)
-plot(cumsum((1./(nubat(vitesse(Couple)).*nuconv(vitesse(Couple)).*nucontr(vitesse(Couple)).*num(vitesse(Couple)).*nump(vitesse(Couple)))).*(Pkin(vitesse(Couple))+Pair(vitesse(Couple))+Proll(vitesse(Couple))+Phill(vitesse(Couple)))*(T/N)))
-title('energie prise à la roue - pente')
-xlabel("energie totale (J) : " + fun(vitesse(Couple))+ "  (" + fun(vitesse(Couple))/3600000+" kWh)")
-
-%% optim3 pente
-
-load("parametres.mat",'l','T','N','m','Cd','A','ro','fr','g','R','f','l','T','N','m','Cd','A','ro','fr','g','R','f',"kv","Pkin","Phill","Proll","Pair")
-
-[couple,Eval,cumEval]=voiturecalculspente(Couple,N,0,0,l,'0.5');
-figure(21)
-plot(couple)
-figure(22)
-plot(vitesse(couple))
-figure(23)
-plot (cumEval)
-title('energie prise à la roue - pente - up&down')
-xlabel("energie totale (J) : " + Eval + "  (" + Eval/3600000+ " kWh)")
-
+figure(44)
+plot(-margev)
+title("marge en vitesse pour non glissement (m/s)")
 
 %% fun
 function r=residuals(params)

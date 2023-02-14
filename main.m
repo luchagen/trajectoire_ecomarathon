@@ -4,9 +4,6 @@
 clear, close all
 %% parametres voiture
 parametres
-%% parametres circuit
-Circuitsparams
-parametres
 %% paramfinder data
 
 load("parametres.mat",'l','T','N','m','Cd','A','ro','fr','g','R','f','kv',"PCI","Pseudo_rendement","density_H2_Stp")
